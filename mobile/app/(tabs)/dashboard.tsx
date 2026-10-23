@@ -55,15 +55,24 @@ export default function DashboardScreen() {
   }
 
   function handleLogout() {
+    async function doLogout() {
+      await clearAuth();
+      router.replace('/login');
+    }
+
+    if (typeof window !== 'undefined' && window.confirm) {
+      if (window.confirm('Are you sure you want to sign out?')) {
+        doLogout();
+      }
+      return;
+    }
+
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign Out',
         style: 'destructive',
-        onPress: async () => {
-          await clearAuth();
-          router.replace('/login');
-        },
+        onPress: doLogout,
       },
     ]);
   }

@@ -34,7 +34,31 @@ export function LoanCard({ loan, onRepaid }: LoanCardProps) {
     });
   }
 
+  async function performRepay() {
+    setLoading(true);
+    try {
+      const updated = await repayLoan(loan.id);
+      onRepaid(updated);
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.error || 'Failed to mark as repaid. Please try again.';
+      Alert.alert('Error', msg);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleRepay() {
+    if (typeof window !== 'undefined' && window.confirm) {
+      const ok = window.confirm(
+        `Mark ₹${loan.amount.toLocaleString()} from ${loan.friend_name} as fully repaid?`
+      );
+      if (ok) {
+        await performRepay();
+      }
+      return;
+    }
+
     Alert.alert(
       'Mark as Repaid',
       `Mark ₹${loan.amount.toLocaleString()} from ${loan.friend_name} as fully repaid?`,
@@ -43,19 +67,7 @@ export function LoanCard({ loan, onRepaid }: LoanCardProps) {
         {
           text: 'Yes, Repaid',
           style: 'default',
-          onPress: async () => {
-            setLoading(true);
-            try {
-              const updated = await repayLoan(loan.id);
-              onRepaid(updated);
-            } catch (err: any) {
-              const msg =
-                err?.response?.data?.error || 'Failed to mark as repaid. Please try again.';
-              Alert.alert('Error', msg);
-            } finally {
-              setLoading(false);
-            }
-          },
+          onPress: performRepay,
         },
       ]
     );

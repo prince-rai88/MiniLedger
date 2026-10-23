@@ -68,9 +68,13 @@ export default function AddLoanScreen() {
         amount: parseFloat(amount),
         due_date: dueDate,
       });
-      Alert.alert('✅ Loan Added', `Loan to ${friendName} recorded successfully.`, [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      if (Platform.OS === 'web') {
+        router.back();
+      } else {
+        Alert.alert('✅ Loan Added', `Loan to ${friendName} recorded successfully.`, [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      }
     } catch (err: any) {
       const msg = err?.response?.data?.error || 'Failed to create loan. Please try again.';
       Alert.alert('Error', msg);
