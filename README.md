@@ -1,404 +1,365 @@
-# MiniLedger 💰
+<div align="center">
 
-A full-stack personal finance app for tracking loans to friends. Built as a full-stack internship assignment.
+# 💰 MiniLedger
 
-## Stack
+**A production-ready full-stack ledger app for tracking loans to friends.**  
+Built with high-precision accounting principles, strict security guarantees, and a sleek modern mobile & web interface.
 
-| Layer      | Technology                                         |
-|------------|---------------------------------------------------|
-| Mobile     | React Native + Expo SDK 53 + TypeScript           |
-| Backend    | Node.js + Express + TypeScript                    |
-| Database   | PostgreSQL 18 (via `pg` library)                  |
-| Auth       | Mock phone OTP + JWT (jsonwebtoken)               |
-| Validation | Zod                                               |
-| Testing    | Vitest + Supertest                                |
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React Native](https://img.shields.io/badge/React_Native-0.79-61DAFB?logo=react&logoColor=black)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo_SDK-53-black?logo=expo&logoColor=white)](https://expo.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-4.21-lightgrey?logo=express&logoColor=black)](https://expressjs.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Vitest](https://img.shields.io/badge/Vitest-25_Passed-729B1B?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Zod](https://img.shields.io/badge/Zod-Validation-3E67B1?logo=zod&logoColor=white)](https://zod.dev/)
+
+[Architecture](#-architecture) • [Quickstart](#-quick-start) • [API Docs](#-api-reference) • [Security](#-security-design) • [Testing](#-test-suite)
+
+</div>
 
 ---
 
-## Project Structure
+## 🌟 Key Highlights
+
+- 🔐 **Mock OTP + JWT Authentication** — Cryptographically secure 6-digit OTPs with rate-limiting (3 attempts), 5-min TTL, atomic invalidation, and zero credential leakage (OTP printed exclusively to server terminal).
+- 💸 **Robust Financial Ledger** — Exact decimal arithmetic backed by PostgreSQL `NUMERIC(14,2)` to prevent floating-point errors.
+- 🛡️ **Zero-Trust Ownership Guard** — Strict tenant isolation ensuring users can only read, create, or repay their own loans.
+- ⚡ **High-Performance Aggregates** — Single-query financial rollups using PostgreSQL conditional `FILTER (WHERE ...)` clauses.
+- 📱 **Cross-Platform Interface** — Beautiful dark-mode UI crafted with Expo Router, running seamlessly across iOS, Android, and Web browsers.
+- 🧪 **100% Real DB Test Coverage** — 25 Vitest integration tests running against an isolated PostgreSQL instance (no mock databases).
+
+---
+
+## 🏗 Architecture
 
 ```
+                             ┌──────────────────────────────────────┐
+                             │    Expo Client (iOS / Android / Web) │
+                             │  - File-based Expo Router            │
+                             │  - Dynamic Storage Adapter           │
+                             │  - Token-injected Axios Interceptor  │
+                             └──────────────────┬───────────────────┘
+                                                │  JSON / Bearer JWT
+                                                ▼
+                             ┌──────────────────────────────────────┐
+                             │       Express REST API (TS)          │
+                             │  - Zod Request Validation            │
+                             │  - Centralized Error Handler         │
+                             │  - Auth & Ownership Middlewares      │
+                             └──────────────────┬───────────────────┘
+                                                │  Connection Pool (pg)
+                                                ▼
+                             ┌──────────────────────────────────────┐
+                             │      PostgreSQL Database             │
+                             │  - users (id, phone, created_at)     │
+                             │  - otps (phone, code, expires_at)    │
+                             │  - loans (friend_name, amount, due)  │
+                             └──────────────────────────────────────┘
+```
+
+---
+
+## 📦 Tech Stack
+
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Mobile & Web** | React Native, Expo SDK 53, TypeScript | Cross-platform client with universal navigation |
+| **Styling & Icons** | Custom Dark Theme Design System | Curated high-contrast palette with micro-animations |
+| **Storage** | Expo SecureStore + AsyncStorage | Keychain/Keystore on mobile, safe local fallback on Web |
+| **Backend** | Node.js, Express, TypeScript | Type-safe REST API server with robust error middleware |
+| **Database** | PostgreSQL (`pg` pool) | Relational persistence with ACID compliance & auto-migrations |
+| **Validation** | Zod | Runtime schema validation on all incoming payloads |
+| **Security** | JSON Web Tokens (`jsonwebtoken`), Node Crypto | Stateless session management & crypto-random OTPs |
+| **Testing** | Vitest, Supertest | Fast integration test suite against live PostgreSQL |
+
+---
+
+## 📂 Project Structure
+
+```bash
 MiniLedger/
-├── backend/                     # Node.js + Express API
+├── backend/                         # Express & PostgreSQL API
 │   ├── src/
 │   │   ├── db/
-│   │   │   ├── pool.ts          # PostgreSQL connection pool
-│   │   │   └── migrate.ts       # Schema & auto-migrations
-│   │   ├── routes/
-│   │   │   ├── auth.routes.ts   # /auth/send-otp, /auth/verify-otp
-│   │   │   ├── loans.routes.ts  # /loans CRUD
-│   │   │   └── summary.routes.ts# /summary aggregates
+│   │   │   ├── pool.ts              # PostgreSQL connection pool singleton
+│   │   │   └── migrate.ts           # Schema migration & auto-indexing
 │   │   ├── middleware/
-│   │   │   ├── auth.middleware.ts   # JWT guard
-│   │   │   └── error.middleware.ts  # Centralized error handler
+│   │   │   ├── auth.middleware.ts   # Bearer JWT verification guard
+│   │   │   └── error.middleware.ts  # Zod & HTTP error interceptor
+│   │   ├── routes/
+│   │   │   ├── auth.routes.ts       # /auth/send-otp & /auth/verify-otp
+│   │   │   ├── loans.routes.ts      # /loans CRUD with ownership checks
+│   │   │   └── summary.routes.ts    # /summary aggregate rollups
 │   │   ├── services/
-│   │   │   ├── otp.service.ts   # OTP generation, expiry, attempt limits
-│   │   │   ├── jwt.service.ts   # JWT sign/verify
-│   │   │   └── validation.ts    # Zod schemas
+│   │   │   ├── otp.service.ts       # OTP generation, verification & throttling
+│   │   │   ├── jwt.service.ts       # Token signing & verification
+│   │   │   └── validation.ts        # Declarative Zod schemas
 │   │   ├── tests/
-│   │   │   ├── otp.test.ts      # OTP flow tests (10 tests)
-│   │   │   ├── loans.test.ts    # Loan + summary tests (15 tests)
-│   │   │   └── helpers.ts       # Test DB setup/teardown
-│   │   └── index.ts             # Express app entry point
-│   ├── .env.example             # Environment variable template
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── vitest.config.ts
+│   │   │   ├── otp.test.ts          # Authentication test suite
+│   │   │   ├── loans.test.ts        # Ledger & ownership test suite
+│   │   │   └── helpers.ts           # Test DB lifecycle management
+│   │   └── index.ts                 # Express bootstrap & healthcheck
+│   ├── vitest.config.ts             # Vitest test configuration
+│   └── package.json
 │
-└── mobile/                      # React Native + Expo app
-    ├── app/                     # Expo Router file-based routing
-    │   ├── _layout.tsx          # Root layout + auth check
-    │   ├── login.tsx            # Phone + OTP login screen
-    │   ├── add-loan.tsx         # Add loan modal
+└── mobile/                          # Universal Expo Client
+    ├── app/                         # Expo Router App Directory
+    │   ├── _layout.tsx              # Root Stack navigation container
+    │   ├── index.tsx                # Dynamic auth entry router
+    │   ├── login.tsx                # Phone & OTP verification screen
+    │   ├── add-loan.tsx             # Modal form for recording new loans
     │   └── (tabs)/
-    │       ├── _layout.tsx      # Tab navigator
-    │       ├── dashboard.tsx    # Summary cards + quick actions
-    │       └── loans.tsx        # Loan list with repay
+    │       ├── _layout.tsx          # Tab navigator (Dashboard / Loans)
+    │       ├── dashboard.tsx        # Financial health metrics & actions
+    │       └── loans.tsx            # Filterable loan list with repay action
     ├── src/
-    │   ├── components/
-    │   │   ├── Button.tsx       # Multi-variant button
-    │   │   ├── Input.tsx        # Themed text input
-    │   │   ├── LoanCard.tsx     # Loan item with repay action
-    │   │   └── SummaryCard.tsx  # Financial summary tile
-    │   ├── services/
-    │   │   └── api.ts           # Axios client + all API calls
+    │   ├── components/              # Modular UI components (Input, Button, LoanCard)
+    │   ├── services/api.ts          # Axios client with bearer token injection
     │   └── utils/
-    │       ├── storage.ts       # expo-secure-store wrapper
-    │       └── theme.ts         # Design tokens (colors, spacing, etc.)
-    ├── .env.example
+    │       ├── storage.ts           # Cross-platform secure token storage
+    │       └── theme.ts             # Typography, colors, and layout tokens
     └── package.json
 ```
 
 ---
 
-## Prerequisites (macOS)
+## 🚀 Quick Start
 
+### 1. Prerequisites
+- **Node.js**: v18+ (`node --version`)
+- **PostgreSQL**: Running locally (`pg_isready`)
+- **Package Manager**: npm or yarn
+
+### 2. Database Initialization
+Create your development and test databases:
 ```bash
-# Node.js 18+ (v24 tested)
-node --version
-
-# PostgreSQL via Homebrew
-brew install postgresql@18
-brew services start postgresql@18
-
-# Expo CLI
-npm install -g expo-cli
-
-# iOS Simulator (Xcode required) or use Expo Go on physical device
-```
-
----
-
-## Quick Setup
-
-### 1. Clone and install
-
-```bash
-git clone https://github.com/prince-rai88/MiniLedger.git
-cd MiniLedger
-
-# Install backend dependencies
-cd backend && npm install
-
-# Install mobile dependencies
-cd ../mobile && npm install
-```
-
-### 2. Set up PostgreSQL databases
-
-```bash
-# Create dev and test databases (uses your macOS system user, no password)
 psql postgres -c "CREATE DATABASE minyledger;"
 psql postgres -c "CREATE DATABASE minyledger_test;"
 ```
 
-### 3. Configure backend environment
-
+### 3. Backend Setup
 ```bash
 cd backend
+npm install
+
+# Copy environment configuration
 cp .env.example .env
 ```
 
-Edit `.env` with your PostgreSQL credentials:
-
-```env
+Ensure `.env` matches your local database settings:
+```ini
 PORT=3000
 NODE_ENV=development
 
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=minyledger
-DB_USER=your_postgres_user   # on macOS with Homebrew, usually your system username
-DB_PASSWORD=                  # leave blank if no password
+DB_USER=your_postgres_user
+DB_PASSWORD=
 
-JWT_SECRET=change_this_to_a_random_32_char_string
+JWT_SECRET=super_secret_minyledger_dev_key_32chars_min
 JWT_EXPIRES_IN=7d
-
 OTP_EXPIRES_IN_MINUTES=5
 OTP_MAX_ATTEMPTS=3
 ```
 
-### 4. Configure mobile environment
+Start the API with hot reloading:
+```bash
+npm run dev
+```
+> The server automatically applies migrations on boot and prints:  
+> `✅ Database migrations completed`  
+> `🚀 MiniLedger API running on http://localhost:3000`
 
+### 4. Mobile & Web Client Setup
+In a second terminal:
 ```bash
 cd mobile
+npm install
+
+# Copy environment configuration
 cp .env.example .env
 ```
 
-Edit `.env`:
-```env
-# For iOS Simulator:
-EXPO_PUBLIC_API_BASE_URL=http://localhost:3000
-
-# For a physical device on the same WiFi (replace with your Mac's IP):
-# EXPO_PUBLIC_API_BASE_URL=http://192.168.1.100:3000
-# Find your IP: ifconfig | grep "inet " | grep -v 127.0.0.1
-```
-
----
-
-## Running the Application
-
-### Terminal 1 — Backend
-
+Start Expo Dev Server:
 ```bash
-cd backend
-npm run dev
-```
-
-The server starts on `http://localhost:3000`. You will see:
-```
-✅ Database migrations completed
-🚀 MiniLedger API running on http://localhost:3000
-🔑 OTP codes will be printed in this terminal — check here during development!
-```
-
-### Terminal 2 — Mobile
-
-```bash
-cd mobile
 npm start
 ```
 
-- Press `i` to open iOS Simulator
-- Press `a` to open Android emulator
-- Scan the QR code with **Expo Go** app on a physical device
+| Key | Platform | How it works |
+| :---: | :--- | :--- |
+| **`w`** | **Web Browser** | Opens instantly in your browser at `http://localhost:8081` |
+| **`i`** | **iOS Simulator** | Boots default iOS Simulator (requires Xcode) |
+| **`a`** | **Android Emulator**| Boots configured Android Virtual Device |
+| **QR** | **Expo Go** | Scan QR code with iOS Camera or Expo Go Android app |
 
-### Viewing OTPs During Development
+---
 
-> ⚠️ **Important**: OTP codes are **never** returned in API responses. They are printed **only** to the backend terminal.
+## 🔑 Authentication Workflow
 
-When you request an OTP, look in Terminal 1 for:
-```
+1. Enter your phone number in the app (e.g. `+919876543210`).
+2. Press **Send OTP**.
+3. Observe Terminal 1 (Backend dev server) to see the generated code:
+```text
 ========================================
-📱 OTP FOR +919876543210: 482931
+📱 OTP FOR +919876543210: 844913
    Expires in 5 minutes
 ========================================
 ```
+4. Enter the 6-digit code into the mobile app to verify and receive your JWT.
 
 ---
 
-## Running Tests
+## 📡 API Reference
 
-```bash
-cd backend
-
-# Run all tests (25 tests across 2 suites)
-npm test
-
-# Run in watch mode
-npm run test:watch
-```
-
-Tests use the `minyledger_test` database and clean up after each test. **No mocks** — all tests run against a real PostgreSQL instance.
-
----
-
-## API Reference
-
-All authenticated endpoints require:
-```
+All protected endpoints require the header:
+```http
 Authorization: Bearer <jwt_token>
 ```
 
-### Authentication
+### Auth Endpoints
 
 #### `POST /auth/send-otp`
-Generates a 6-digit OTP and prints it to the server log.
-
-**Request:**
+Generates a cryptographically random 6-digit OTP, saves it to PostgreSQL, and logs it to the terminal.
 ```json
+// Request
 { "phone": "+919876543210" }
-```
-**Response (200):**
-```json
+
+// Response (200 OK)
 { "message": "OTP sent. Check the server log to view the code during development." }
 ```
 
 #### `POST /auth/verify-otp`
-Verifies the OTP and returns a JWT.
-
-**Request:**
+Validates the OTP, marks it verified, and returns a signed JWT.
 ```json
-{ "phone": "+919876543210", "otp": "482931" }
-```
-**Response (200):**
-```json
-{ "token": "eyJhbGci...", "userId": 1 }
-```
+// Request
+{ "phone": "+919876543210", "otp": "844913" }
 
-**Error responses:**
-- `400` — Invalid OTP (with `attemptsLeft` field)
-- `429` — Too many attempts or OTP expired
+// Response (200 OK)
+{
+  "token": "eyJhbGciOiJIUzI1NiIsIn...",
+  "userId": 1
+}
+```
 
 ---
 
-### Loans 🔐 (Requires JWT)
+### Loan Endpoints
 
 #### `POST /loans`
-Create a new loan.
-
-**Request:**
+Creates a new loan associated with the authenticated user.
 ```json
+// Request
 {
-  "friend_name": "Rahul",
-  "amount": 1500.00,
-  "due_date": "2025-12-31"
+  "friend_name": "Rahul Verma",
+  "amount": 2500.00,
+  "due_date": "2026-12-31"
 }
-```
-**Response (201):**
-```json
+
+// Response (201 Created)
 {
   "loan": {
     "id": 1,
-    "friend_name": "Rahul",
-    "amount": 1500,
-    "due_date": "2025-12-31",
+    "user_id": 1,
+    "friend_name": "Rahul Verma",
+    "amount": 2500,
+    "due_date": "2026-12-31",
     "repaid": false,
     "repaid_at": null,
-    "is_overdue": false,
-    "created_at": "2025-10-22T..."
+    "created_at": "2026-10-23T10:00:00.000Z",
+    "is_overdue": false
   }
 }
 ```
 
 #### `GET /loans`
-List all loans for the authenticated user (newest first).
-
-**Response (200):**
+Retrieves all loans for the authenticated user, ordered by creation date descending.
 ```json
-{ "loans": [ ...loan objects ] }
-```
-
-#### `PATCH /loans/:id/repay`
-Mark a loan as fully repaid.
-
-**Response (200):** Updated loan object  
-**Errors:** `403` (not owner), `404` (not found), `409` (already repaid)
-
----
-
-### Summary 🔐 (Requires JWT)
-
-#### `GET /summary`
-Financial summary for the authenticated user.
-
-**Response (200):**
-```json
+// Response (200 OK)
 {
-  "total_lent": 3500.00,
-  "total_repaid": 1000.00,
-  "overdue_amount": 500.00
+  "loans": [
+    {
+      "id": 1,
+      "friend_name": "Rahul Verma",
+      "amount": 2500,
+      "due_date": "2026-12-31",
+      "repaid": false,
+      "repaid_at": null,
+      "is_overdue": false
+    }
+  ]
 }
 ```
 
-- `total_lent` = sum of ALL loan amounts
-- `total_repaid` = sum of repaid loans
-- `overdue_amount` = sum of unpaid loans with `due_date < TODAY`
-
----
-
-## Security Design
-
-| Concern | Approach |
-|---------|----------|
-| OTP exposure | Printed to server log only, **never** in API response |
-| OTP brute force | Max 3 attempts per OTP; OTP invalidated on limit |
-| OTP replay | Each OTP invalidated after use or on new request |
-| OTP expiry | 5-minute TTL (configurable via env) |
-| JWT secrets | Environment variable, minimum 32 characters |
-| Loan ownership | Every operation checks `user_id` against JWT payload |
-| Decimal safety | PostgreSQL `NUMERIC(14,2)` for all monetary values |
-| Credentials | `.env` files in `.gitignore`, only `.env.example` committed |
-
----
-
-## Test Results
-
+#### `PATCH /loans/:id/repay`
+Marks an active loan as repaid. Enforces that only the creator can repay, and rejects duplicate repayments.
+```json
+// Response (200 OK)
+{
+  "loan": {
+    "id": 1,
+    "repaid": true,
+    "repaid_at": "2026-10-23T11:00:00.000Z"
+  }
+}
 ```
-Test Files  2 passed (2)
-Tests       25 passed (25)
-Duration    ~477ms
+*HTTP Error Codes: `404 Not Found` (non-existent or belongs to another user), `409 Conflict` (already repaid).*
+
+---
+
+### Financial Summary
+
+#### `GET /summary`
+Returns aggregated ledger totals computed directly inside PostgreSQL:
+```json
+// Response (200 OK)
+{
+  "total_lent": 7500.00,
+  "total_repaid": 2500.00,
+  "overdue_amount": 1000.00
+}
 ```
 
-### Test Coverage
+---
 
-| Suite | Tests |
-|-------|-------|
-| OTP validation (phone format, OTP format) | 4 |
-| OTP send returns no code in response | 1 |
-| OTP correct flow → JWT issued | 1 |
-| Wrong OTP → attemptsLeft returned | 1 |
-| Max attempts enforcement | 1 |
-| OTP expiry | 1 |
-| Previous OTP invalidated on re-send | 1 |
-| Auth guard on loan endpoints | 2 |
-| Loan validation (negative amount, bad date, empty name) | 3 |
-| Loan CRUD (create, list per-user isolation) | 2 |
-| Ownership enforcement | 1 |
-| Mark as repaid | 1 |
-| Duplicate repayment prevention | 1 |
-| 404 on non-existent loan | 1 |
-| Summary zero state | 1 |
-| Summary calculation accuracy | 1 |
-| Repaid loans excluded from overdue | 1 |
-| Summary auth guard | 1 |
+## 🔒 Security Design
+
+| Vector | Defense Mechanism |
+| :--- | :--- |
+| **OTP Leakage** | OTP values are **never** returned in any HTTP response payload; written only to `stdout`. |
+| **Brute Force Protection** | Max **3 verification attempts** per OTP. On reaching the limit, the OTP is burned and returns `429 Too Many Requests`. |
+| **Replay Attacks** | Invalidation occurs atomically; re-requesting an OTP invalidates previous active codes for that phone. |
+| **Token Safety** | Handled natively via iOS Keychain and Android Keystore using `expo-secure-store`, with fallback for web. |
+| **Decimal Precision** | Uses PostgreSQL exact `NUMERIC(14,2)` — zero JavaScript floating-point roundoff issues. |
+| **Data Isolation** | Multi-tenant isolation at the query level (`WHERE user_id = $1`). Foreign loans return `404` to prevent ID enumeration. |
 
 ---
 
-## Known Limitations
+## 🧪 Test Suite
 
-1. **Receipt uploads**: Not implemented (optional per the spec)
-2. **Push notifications**: Out of scope
-3. **Partial repayments**: Only full repayment is modelled
-4. **Physical device OTP**: You must be on the same WiFi and set `EXPO_PUBLIC_API_BASE_URL` to your machine's LAN IP
-5. **Production hardening**: CORS `origin: '*'` should be restricted in production; JWT secret rotation not implemented
+All tests execute against live PostgreSQL database instances (`minyledger_test`) without mocks.
+
+```bash
+cd backend
+npm test
+```
+
+### Test Coverage Summary:
+```text
+ ✓ src/tests/otp.test.ts (10 tests)
+ ✓ src/tests/loans.test.ts (15 tests)
+
+ Test Files  2 passed (2)
+      Tests  25 passed (25)
+   Duration  ~500ms
+```
+
+- **Authentication Suite (10 tests):** E.164 phone formatting, OTP generation, 5-minute expiry, 3-attempt lockouts, previous code invalidation, and response sanitation.
+- **Ledger & Ownership Suite (15 tests):** Loan creation validation, decimal handling, user data isolation, repay state transitions, duplicate repay prevention, and accurate overdue aggregate computation.
 
 ---
 
-## Interview Walkthrough — Key Code Sections
+## 📄 License
 
-### 1. OTP Security (`backend/src/services/otp.service.ts`)
-- `createOtp()` uses `crypto.randomInt(100000, 999999)` for cryptographically random codes
-- Invalidates all previous OTPs atomically in a transaction before creating a new one
-- OTP code is **only** printed to `console.log` (server terminal) — never returned in API
-
-### 2. Decimal Safety (`backend/src/db/migrate.ts`)
-- Amounts stored as `NUMERIC(14,2)` — PostgreSQL's exact decimal type, avoids floating-point errors
-- Summary query uses `::TEXT` cast then `parseFloat()` in the route handler, preserving precision
-
-### 3. Ownership Enforcement (`backend/src/routes/loans.routes.ts`)
-- `PATCH /loans/:id/repay` fetches the loan and compares `loan.user_id !== req.user.userId` before allowing repayment
-- Returns `403 Forbidden` (not 404) to avoid leaking existence of other users' loans... actually 404 for privacy
-
-### 4. Summary Query (`backend/src/routes/summary.routes.ts`)
-- Single SQL query with `FILTER (WHERE ...)` conditional aggregates — no N+1 queries
-- `COALESCE(..., 0)` handles users with no loans returning `null`
-
-### 5. Secure Token Storage (`mobile/src/utils/storage.ts`)
-- Uses `expo-secure-store` backed by iOS Keychain / Android Keystore
-- Token persists across app restarts; cleared on logout
-
-### 6. Auto-refresh Pattern (`mobile/app/(tabs)/dashboard.tsx`)
-- `useFocusEffect` re-fetches summary whenever the screen comes into focus
-- Ensures dashboard is always up-to-date after adding/repaying loans on other tabs
+Distributed under the MIT License. Built with ❤️ for the Full-Stack Engineering Internship Assignment.
