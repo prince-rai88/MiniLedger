@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  View,
   Text,
   TouchableOpacity,
   ActivityIndicator,
@@ -8,7 +7,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { Colors, Radius, Typography } from '../utils/theme';
+import { Colors, Radius, Typography, Shadow } from '../utils/theme';
 
 interface ButtonProps {
   title: string;
@@ -35,12 +34,18 @@ export function Button({
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.8}
-      style={[styles.base, styles[variant], isDisabled && styles.disabled, style]}
+      activeOpacity={0.75}
+      style={[
+        styles.base,
+        styles[variant],
+        variant === 'primary' && Shadow.subtle,
+        isDisabled && styles.disabled,
+        style,
+      ]}
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? '#fff' : Colors.primary}
+          color={variant === 'primary' || variant === 'danger' ? '#ffffff' : Colors.primary}
           size="small"
         />
       ) : (
@@ -56,37 +61,42 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   primary: {
     backgroundColor: Colors.primary,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   outline: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: Colors.borderLight,
   },
   danger: {
     backgroundColor: Colors.danger,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   ghost: {
     backgroundColor: 'transparent',
   },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.45,
   },
   text: {
     ...Typography.body,
     fontWeight: '600',
+    letterSpacing: -0.2,
   },
   primaryText: {
-    color: '#fff',
+    color: '#ffffff',
   },
   outlineText: {
-    color: Colors.primary,
+    color: Colors.textPrimary,
   },
   dangerText: {
-    color: '#fff',
+    color: '#ffffff',
   },
   ghostText: {
     color: Colors.textSecondary,

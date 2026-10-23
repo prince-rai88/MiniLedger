@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   TextInput,
   Text,
@@ -15,14 +15,29 @@ interface InputProps extends TextInputProps {
   containerStyle?: ViewStyle;
 }
 
-export function Input({ label, error, containerStyle, style, ...rest }: InputProps) {
+export function Input({ label, error, containerStyle, style, onFocus, onBlur, ...rest }: InputProps) {
+  const [isFocused, setIsFocused] = useState(false);
+
   return (
     <View style={[styles.container, containerStyle]}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
-        style={[styles.input, error ? styles.inputError : null, style]}
+        style={[
+          styles.input,
+          isFocused && styles.inputFocused,
+          error ? styles.inputError : null,
+          style,
+        ]}
         placeholderTextColor={Colors.textMuted}
-        selectionColor={Colors.primary}
+        selectionColor={Colors.primaryLight}
+        onFocus={(e) => {
+          setIsFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setIsFocused(false);
+          onBlur?.(e);
+        }}
         {...rest}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -37,8 +52,9 @@ const styles = StyleSheet.create({
   label: {
     ...Typography.bodySmall,
     color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
+    marginBottom: 6,
     fontWeight: '500',
+    letterSpacing: -0.1,
   },
   input: {
     backgroundColor: Colors.bgInput,
@@ -49,13 +65,20 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     ...Typography.body,
     color: Colors.textPrimary,
+    minHeight: 52,
+  },
+  inputFocused: {
+    borderColor: Colors.borderFocus,
+    backgroundColor: Colors.bgInputFocus,
   },
   inputError: {
     borderColor: Colors.danger,
+    backgroundColor: 'rgba(248, 113, 113, 0.06)',
   },
   error: {
     ...Typography.bodySmall,
-    color: Colors.danger,
-    marginTop: Spacing.xs,
+    color: Colors.dangerLight,
+    marginTop: 6,
+    fontWeight: '500',
   },
 });

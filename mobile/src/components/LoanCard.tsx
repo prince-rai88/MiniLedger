@@ -18,20 +18,21 @@ interface LoanCardProps {
 export function LoanCard({ loan, onRepaid }: LoanCardProps) {
   const [loading, setLoading] = useState(false);
 
-  const statusColor = loan.repaid
-    ? Colors.success
-    : loan.is_overdue
-    ? Colors.danger
-    : Colors.primary;
-
-  const statusLabel = loan.repaid ? 'Repaid' : loan.is_overdue ? 'Overdue' : 'Active';
-
   function formatDate(d: string) {
     return new Date(d).toLocaleDateString('en-IN', {
-      day: '2-digit',
+      day: 'numeric',
       month: 'short',
       year: 'numeric',
     });
+  }
+
+  function getInitials(name: string) {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
   }
 
   async function performRepay() {
@@ -73,55 +74,103 @@ export function LoanCard({ loan, onRepaid }: LoanCardProps) {
     );
   }
 
+  const isOverdue = loan.is_overdue && !loan.repaid;
+
   return (
     <View
       style={[
         styles.card,
-        loan.is_overdue && !loan.repaid && styles.cardOverdue,
+        isOverdue && styles.cardOverdue,
+        loan.repaid && styles.cardRepaid,
         Shadow.card,
       ]}
     >
-      {/* Status indicator bar */}
-      <View style={[styles.statusBar, { backgroundColor: statusColor }]} />
+      <View style={styles.topRow}>
+        {/* Avatar with Initials */}
+        <View
+          style={[
+            styles.avatar,
+            loan.repaid
+              ? styles.avatarRepaid
+              : isOverdue
+              ? styles.avatarOverdue
+              : styles.avatarActive,
+          ]}
+        >
+          <Text
+            style={[
+              styles.avatarText,
+              loan.repaid
+                ? { color: Colors.success }
+                : isOverdue
+                ? { color: Colors.danger }
+                : { color: Colors.primaryLight },
+            ]}
+          >
+            {getInitials(loan.friend_name)}
+          </Text>
+        </View>
 
-      <View style={styles.content}>
-        <View style={styles.topRow}>
-          <View style={styles.nameContainer}>
-            <Text style={styles.avatar}>{loan.friend_name.charAt(0).toUpperCase()}</Text>
-            <View>
-              <Text style={styles.friendName}>{loan.friend_name}</Text>
-              <Text style={styles.date}>Due {formatDate(loan.due_date)}</Text>
+        {/* Center Details */}
+        <View style={styles.details}>
+          <Text style={styles.friendName} numberOfLines={1}>
+            {loan.friend_name}
+          </Text>
+          <Text style={styles.dateText}>
+            {loan.repaid
+              ? `Repaid on ${formatDate(loan.repaid_at || loan.created_at)}`
+              : `Due ${formatDate(loan.due_date)}`}
+          </Text>
+        </View>
+
+        {/* Right Amount */}
+        <View style={styles.amountCol}>
+          <Text
+            style={[
+              styles.amount,
+              loan.repaid
+                ? styles.amountRepaid
+                : isOverdue
+                ? styles.amountOverdue
+                : styles.amountActive,
+            ]}
+          >
+            ₹{loan.amount.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+          </Text>
+        </View>
+      </View>
+
+      {/* Bottom Status / Action Strip */}
+      <View style={styles.footerRow}>
+        <View style={styles.statusBadgeContainer}>
+          {loan.repaid ? (
+            <View style={[styles.statusPill, styles.pillSuccess]}>
+              <Text style={styles.pillTextSuccess}>✓ Repaid</Text>
             </View>
-          </View>
-          <View style={styles.amountContainer}>
-            <Text style={[styles.amount, { color: statusColor }]}>
-              ₹{loan.amount.toLocaleString()}
-            </Text>
-            <View style={[styles.badge, { backgroundColor: statusColor + '22' }]}>
-              <Text style={[styles.badgeText, { color: statusColor }]}>{statusLabel}</Text>
+          ) : isOverdue ? (
+            <View style={[styles.statusPill, styles.pillDanger]}>
+              <Text style={styles.pillTextDanger}>⚠️ Overdue</Text>
             </View>
-          </View>
+          ) : (
+            <View style={[styles.statusPill, styles.pillActive]}>
+              <Text style={styles.pillTextActive}>Active Loan</Text>
+            </View>
+          )}
         </View>
 
         {!loan.repaid && (
           <TouchableOpacity
-            style={styles.repayBtn}
+            style={styles.repayButton}
             onPress={handleRepay}
             disabled={loading}
-            activeOpacity={0.75}
+            activeOpacity={0.7}
           >
             {loading ? (
-              <ActivityIndicator color={Colors.primary} size="small" />
+              <ActivityIndicator size="small" color={Colors.primaryLight} />
             ) : (
-              <Text style={styles.repayBtnText}>Mark as Repaid</Text>
+              <Text style={styles.repayButtonText}>Mark Repaid</Text>
             )}
           </TouchableOpacity>
-        )}
-
-        {loan.repaid && loan.repaid_at && (
-          <Text style={styles.repaidAt}>
-            Repaid on {formatDate(loan.repaid_at)}
-          </Text>
         )}
       </View>
     </View>
@@ -134,89 +183,125 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: 1,
     borderColor: Colors.border,
+    padding: Spacing.md,
     marginBottom: Spacing.md,
-    flexDirection: 'row',
-    overflow: 'hidden',
   },
   cardOverdue: {
-    borderColor: Colors.danger + '40',
+    borderColor: 'rgba(248, 113, 113, 0.25)',
   },
-  statusBar: {
-    width: 4,
-  },
-  content: {
-    flex: 1,
-    padding: Spacing.md,
+  cardRepaid: {
+    opacity: 0.85,
   },
   topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  nameContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    flex: 1,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primaryMuted,
-    color: Colors.primary,
-    textAlign: 'center',
-    lineHeight: 40,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  friendName: {
-    ...Typography.body,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  date: {
-    ...Typography.bodySmall,
-  },
-  amountContainer: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  amount: {
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  repayBtn: {
-    marginTop: Spacing.sm,
-    height: 36,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: Colors.primaryMuted,
-    backgroundColor: Colors.primaryMuted,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: Spacing.md,
   },
-  repayBtnText: {
-    color: Colors.primary,
-    fontSize: 13,
-    fontWeight: '600',
+  avatarActive: {
+    backgroundColor: Colors.primaryMuted,
   },
-  repaidAt: {
+  avatarOverdue: {
+    backgroundColor: Colors.dangerMuted,
+  },
+  avatarRepaid: {
+    backgroundColor: Colors.successMuted,
+  },
+  avatarText: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  details: {
+    flex: 1,
+  },
+  friendName: {
+    ...Typography.heading3,
+    fontSize: 16,
+    marginBottom: 3,
+  },
+  dateText: {
     ...Typography.bodySmall,
-    color: Colors.success,
-    marginTop: Spacing.xs,
+    color: Colors.textMuted,
     fontSize: 12,
+  },
+  amountCol: {
+    alignItems: 'flex-end',
+    marginLeft: Spacing.sm,
+  },
+  amount: {
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.4,
+  },
+  amountActive: {
+    color: Colors.textPrimary,
+  },
+  amountOverdue: {
+    color: Colors.danger,
+  },
+  amountRepaid: {
+    color: Colors.success,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.sm + 4,
+    paddingTop: Spacing.sm + 2,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  statusBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+  },
+  pillSuccess: {
+    backgroundColor: Colors.successMuted,
+  },
+  pillDanger: {
+    backgroundColor: Colors.dangerMuted,
+  },
+  pillActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  pillTextSuccess: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.success,
+  },
+  pillTextDanger: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.dangerLight,
+  },
+  pillTextActive: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: Colors.textSecondary,
+  },
+  repayButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.3)',
+  },
+  repayButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.primaryLight,
   },
 });

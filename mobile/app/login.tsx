@@ -85,22 +85,22 @@ export default function LoginScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
+        {/* Brand Header */}
         <View style={styles.header}>
-          <View style={styles.logoCircle}>
+          <View style={[styles.logoCircle, Shadow.glow]}>
             <Text style={styles.logoText}>₹</Text>
           </View>
           <Text style={styles.appName}>MiniLedger</Text>
-          <Text style={styles.tagline}>Track loans with friends</Text>
+          <Text style={styles.tagline}>Intelligent Ledger for Friends</Text>
         </View>
 
-        {/* Card */}
+        {/* Apple Style Glass Card */}
         <View style={[styles.card, Shadow.card]}>
           {step === 'phone' ? (
             <>
-              <Text style={styles.cardTitle}>Welcome</Text>
+              <Text style={styles.cardTitle}>Sign In</Text>
               <Text style={styles.cardSubtitle}>
-                Enter your phone number to sign in or create an account.
+                Enter your mobile number to access your ledger.
               </Text>
               <Input
                 label="Phone Number"
@@ -112,25 +112,41 @@ export default function LoginScreen() {
                 error={errors.phone}
               />
               <Button
-                title="Send OTP"
+                title="Continue"
                 onPress={handleSendOtp}
                 loading={loading}
+                style={styles.actionBtn}
               />
-              <Text style={styles.hint}>
-                💡 Check the backend terminal for the OTP code
-              </Text>
+              <View style={styles.hintContainer}>
+                <Text style={styles.hintText}>
+                  ⚡ OTP will appear in your backend server terminal
+                </Text>
+              </View>
             </>
           ) : (
             <>
-              <Text style={styles.cardTitle}>Verify OTP</Text>
+              <Text style={styles.cardTitle}>Verify Security Code</Text>
               <Text style={styles.cardSubtitle}>
-                Check the backend server terminal for the 6-digit OTP.
+                Check the backend terminal log for your 6-digit code.
               </Text>
-              <View style={styles.phonePill}>
-                <Text style={styles.phonePillText}>{phone}</Text>
+
+              {/* Phone Badge */}
+              <View style={styles.phoneBadge}>
+                <Text style={styles.phoneBadgeText}>{phone}</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setStep('phone');
+                    setOtp('');
+                    setErrors({});
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.changePhoneText}>Change</Text>
+                </TouchableOpacity>
               </View>
+
               <Input
-                label="6-Digit OTP"
+                label="6-Digit Verification Code"
                 placeholder="• • • • • •"
                 value={otp}
                 onChangeText={(v) => {
@@ -143,20 +159,21 @@ export default function LoginScreen() {
                 error={errors.otp}
                 style={styles.otpInput}
               />
+
               <Button
                 title="Verify & Sign In"
                 onPress={handleVerifyOtp}
                 loading={loading}
+                style={styles.actionBtn}
               />
+
               <TouchableOpacity
-                onPress={() => {
-                  setStep('phone');
-                  setOtp('');
-                  setErrors({});
-                }}
-                style={styles.backBtn}
+                onPress={handleSendOtp}
+                disabled={loading}
+                style={styles.resendBtn}
+                activeOpacity={0.7}
               >
-                <Text style={styles.backBtnText}>← Change number</Text>
+                <Text style={styles.resendText}>Request New Code</Text>
               </TouchableOpacity>
             </>
           )}
@@ -167,91 +184,121 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: Colors.bg },
+  flex: {
+    flex: 1,
+    backgroundColor: Colors.bg,
+  },
   container: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: Spacing.lg,
+    maxWidth: 480,
+    width: '100%',
+    alignSelf: 'center',
   },
   header: {
     alignItems: 'center',
     marginBottom: Spacing.xl,
   },
   logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: Colors.primary + '40',
+    width: 68,
+    height: 68,
+    borderRadius: 22,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   logoText: {
-    fontSize: 36,
-    color: Colors.primary,
+    fontSize: 32,
     fontWeight: '700',
+    color: '#ffffff',
   },
   appName: {
     ...Typography.heading1,
-    color: Colors.textPrimary,
+    fontSize: 28,
+    textAlign: 'center',
     marginBottom: 4,
   },
   tagline: {
-    ...Typography.body,
+    ...Typography.bodySmall,
     color: Colors.textSecondary,
+    textAlign: 'center',
   },
   card: {
     backgroundColor: Colors.bgCard,
     borderRadius: Radius.xl,
+    padding: Spacing.xl,
     borderWidth: 1,
     borderColor: Colors.border,
-    padding: Spacing.lg,
   },
   cardTitle: {
     ...Typography.heading2,
-    marginBottom: Spacing.xs,
+    fontSize: 20,
+    marginBottom: 6,
   },
   cardSubtitle: {
-    ...Typography.body,
-    color: Colors.textSecondary,
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
     marginBottom: Spacing.lg,
-    lineHeight: 22,
+    lineHeight: 18,
   },
-  phonePill: {
+  actionBtn: {
+    marginTop: Spacing.sm,
+  },
+  hintContainer: {
+    marginTop: Spacing.lg,
+    padding: Spacing.sm + 2,
+    borderRadius: Radius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+  },
+  hintText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  phoneBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: Colors.bgInput,
-    borderRadius: Radius.full,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: Radius.md,
     marginBottom: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  phonePillText: {
+  phoneBadgeText: {
     ...Typography.body,
-    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  changePhoneText: {
+    ...Typography.bodySmall,
+    color: Colors.primaryLight,
     fontWeight: '600',
   },
   otpInput: {
-    textAlign: 'center',
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
     letterSpacing: 8,
-  },
-  hint: {
-    ...Typography.bodySmall,
-    color: Colors.textMuted,
     textAlign: 'center',
-    marginTop: Spacing.md,
+    fontWeight: '700',
   },
-  backBtn: {
+  resendBtn: {
     marginTop: Spacing.md,
     alignItems: 'center',
+    padding: Spacing.xs,
   },
-  backBtnText: {
-    ...Typography.body,
-    color: Colors.textSecondary,
+  resendText: {
+    ...Typography.bodySmall,
+    color: Colors.primaryLight,
+    fontWeight: '500',
   },
 });

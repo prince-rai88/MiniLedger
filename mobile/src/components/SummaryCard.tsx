@@ -16,27 +16,35 @@ const variantConfig = {
     labelColor: Colors.textSecondary,
     amountColor: Colors.textPrimary,
     accentColor: Colors.primary,
+    accentBg: Colors.primaryMuted,
+    icon: '↗',
   },
   success: {
     bg: Colors.bgCard,
-    borderColor: Colors.success + '30',
+    borderColor: 'rgba(52, 211, 153, 0.25)',
     labelColor: Colors.success,
     amountColor: Colors.success,
     accentColor: Colors.success,
+    accentBg: Colors.successMuted,
+    icon: '✓',
   },
   danger: {
     bg: Colors.bgCard,
-    borderColor: Colors.danger + '30',
-    labelColor: Colors.danger,
+    borderColor: 'rgba(248, 113, 113, 0.25)',
+    labelColor: Colors.dangerLight,
     amountColor: Colors.danger,
     accentColor: Colors.danger,
+    accentBg: Colors.dangerMuted,
+    icon: '!',
   },
   warning: {
     bg: Colors.bgCard,
-    borderColor: Colors.warning + '30',
-    labelColor: Colors.warning,
+    borderColor: 'rgba(251, 191, 36, 0.25)',
+    labelColor: Colors.warningLight,
     amountColor: Colors.warning,
     accentColor: Colors.warning,
+    accentBg: Colors.warningMuted,
+    icon: '⏳',
   },
 };
 
@@ -55,10 +63,16 @@ export function SummaryCard({ label, amount, variant = 'default', style }: Summa
         style,
       ]}
     >
-      {/* Accent dot */}
-      <View style={[styles.dot, { backgroundColor: config.accentColor }]} />
-      <Text style={[styles.label, { color: config.labelColor }]}>{label}</Text>
-      <Text style={[styles.amount, { color: config.amountColor }]}>
+      {/* Top Header with Label & Minimal Apple Pill */}
+      <View style={styles.topRow}>
+        <Text style={[styles.label, { color: config.labelColor }]}>{label}</Text>
+        <View style={[styles.iconBadge, { backgroundColor: config.accentBg }]}>
+          <Text style={[styles.iconText, { color: config.accentColor }]}>{config.icon}</Text>
+        </View>
+      </View>
+
+      {/* Primary Currency Amount */}
+      <Text style={[styles.amount, { color: config.amountColor }]} numberOfLines={1}>
         ₹{formatAmount(amount)}
       </Text>
     </View>
@@ -81,26 +95,32 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: 1,
     padding: Spacing.md,
-    minHeight: 90,
-    justifyContent: 'flex-end',
-    position: 'relative',
-    overflow: 'hidden',
+    minHeight: 104,
+    justifyContent: 'space-between',
   },
-  dot: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  iconBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   label: {
     ...Typography.caption,
-    marginBottom: Spacing.xs,
   },
   amount: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    letterSpacing: -0.5,
+    letterSpacing: -0.6,
   },
 });

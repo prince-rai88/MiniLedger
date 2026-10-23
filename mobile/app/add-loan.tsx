@@ -30,7 +30,6 @@ export default function AddLoanScreen() {
   const [errors, setErrors] = useState<Errors>({});
 
   function formatDateInput(raw: string): string {
-    // Strip non-digits
     const digits = raw.replace(/\D/g, '').slice(0, 8);
     if (digits.length <= 4) return digits;
     if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
@@ -83,7 +82,6 @@ export default function AddLoanScreen() {
     }
   }
 
-  // Quick-set common due date shortcuts
   function setQuickDate(days: number) {
     const d = new Date();
     d.setDate(d.getDate() + days);
@@ -100,24 +98,23 @@ export default function AddLoanScreen() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Modal handle */}
+        {/* iOS Modal Grabber Bar */}
         <View style={styles.handle} />
 
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>Add Loan</Text>
-          <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
-            <Text style={styles.closeBtnText}>✕</Text>
+        {/* Header Bar */}
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={styles.cancelBtn}>
+            <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
+          <Text style={styles.modalTitle}>New Loan</Text>
+          <View style={{ width: 60 }} />
         </View>
 
-        <Text style={styles.subtitle}>
-          Record money you lent to a friend
-        </Text>
-
+        {/* Main Card */}
         <View style={[styles.card, Shadow.card]}>
           <Input
-            label="Friend's Name"
-            placeholder="e.g. Rahul"
+            label="Borrower / Friend Name"
+            placeholder="e.g. Rahul Verma"
             value={friendName}
             onChangeText={(v) => {
               setFriendName(v);
@@ -142,7 +139,7 @@ export default function AddLoanScreen() {
 
           <Input
             label="Due Date (YYYY-MM-DD)"
-            placeholder="2025-12-31"
+            placeholder="2026-12-31"
             value={dueDate}
             onChangeText={(v) => {
               setDueDate(formatDateInput(v));
@@ -153,7 +150,8 @@ export default function AddLoanScreen() {
             error={errors.due_date}
           />
 
-          {/* Quick date shortcuts */}
+          {/* Quick Date Chips */}
+          <Text style={styles.shortcutsLabel}>Quick Set Due Date</Text>
           <View style={styles.shortcuts}>
             {[
               { label: '1 Week', days: 7 },
@@ -162,8 +160,9 @@ export default function AddLoanScreen() {
             ].map(({ label, days }) => (
               <TouchableOpacity
                 key={days}
-                style={styles.shortcut}
+                style={styles.shortcutChip}
                 onPress={() => setQuickDate(days)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.shortcutText}>{label}</Text>
               </TouchableOpacity>
@@ -172,7 +171,7 @@ export default function AddLoanScreen() {
         </View>
 
         <Button
-          title="Add Loan"
+          title="Save Loan"
           onPress={handleSubmit}
           loading={loading}
           style={styles.submitBtn}
@@ -183,69 +182,78 @@ export default function AddLoanScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: Colors.bg },
-  container: { padding: Spacing.lg, paddingTop: Spacing.md },
-  handle: {
+  flex: {
+    flex: 1,
+    backgroundColor: Colors.bg,
+  },
+  container: {
+    padding: Spacing.lg,
+    maxWidth: 540,
+    width: '100%',
     alignSelf: 'center',
+    paddingBottom: Spacing.xxl,
+  },
+  handle: {
     width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.border,
-    marginBottom: Spacing.lg,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignSelf: 'center',
+    marginBottom: Spacing.md,
   },
-  headerRow: {
+  modalHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
-  },
-  title: { ...Typography.heading2 },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.bgCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtnText: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  subtitle: {
-    ...Typography.body,
-    color: Colors.textSecondary,
     marginBottom: Spacing.lg,
+    paddingHorizontal: 4,
+  },
+  cancelBtn: {
+    width: 60,
+  },
+  cancelText: {
+    ...Typography.body,
+    color: Colors.primaryLight,
+    fontWeight: '500',
+  },
+  modalTitle: {
+    ...Typography.heading3,
+    fontSize: 17,
   },
   card: {
     backgroundColor: Colors.bgCard,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.xl,
+    padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.border,
-    padding: Spacing.md,
     marginBottom: Spacing.lg,
+  },
+  shortcutsLabel: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+    marginBottom: Spacing.sm,
+    letterSpacing: 0.5,
   },
   shortcuts: {
     flexDirection: 'row',
-    gap: Spacing.xs,
-    marginTop: Spacing.xs,
+    gap: Spacing.sm,
   },
-  shortcut: {
+  shortcutChip: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: Colors.primary + '30',
+    backgroundColor: Colors.bgInput,
+    paddingVertical: 10,
+    borderRadius: Radius.md,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   shortcutText: {
-    color: Colors.primary,
-    fontSize: 12,
+    ...Typography.bodySmall,
+    color: Colors.textPrimary,
     fontWeight: '600',
+    fontSize: 12,
   },
-  submitBtn: { marginBottom: Spacing.xl },
+  submitBtn: {
+    marginTop: Spacing.sm,
+  },
 });

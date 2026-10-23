@@ -12,7 +12,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { LoanCard } from '../../src/components/LoanCard';
 import { Loan, fetchLoans } from '../../src/services/api';
 import { clearAuth } from '../../src/utils/storage';
-import { Colors, Spacing, Radius, Typography } from '../../src/utils/theme';
+import { Colors, Spacing, Radius, Typography, Shadow } from '../../src/utils/theme';
+
+type FilterTab = 'all' | 'active' | 'overdue' | 'repaid';
 
 export default function LoansScreen() {
   const router = useRouter();
@@ -20,6 +22,7 @@ export default function LoansScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<FilterTab>('all');
 
   async function loadLoans() {
     try {
@@ -40,7 +43,6 @@ export default function LoansScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
       loadLoans();
     }, [])
   );
@@ -57,191 +59,261 @@ export default function LoansScreen() {
 
   const activeLoans = loans.filter((l) => !l.repaid);
   const repaidLoans = loans.filter((l) => l.repaid);
-  const overdueCount = loans.filter((l) => l.is_overdue).length;
+  const overdueLoans = loans.filter((l) => l.is_overdue && !l.repaid);
+
+  const filteredLoans =
+    activeTab === 'active'
+      ? activeLoans
+      : activeTab === 'overdue'
+      ? overdueLoans
+      : activeTab === 'repaid'
+      ? repaidLoans
+      : loans;
 
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator color={Colors.primary} size="large" />
+        <ActivityIndicator color={Colors.primaryLight} size="large" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Your Loans</Text>
-          {overdueCount > 0 && (
-            <Text style={styles.overdueWarning}>
-              ⚠️ {overdueCount} loan{overdueCount > 1 ? 's' : ''} overdue
-            </Text>
-          )}
-        </View>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => router.push('/add-loan')}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.addBtnText}>＋ Add</Text>
-        </TouchableOpacity>
-      </View>
-
-      {error ? (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : null}
-
-      <FlatList
-        data={[...activeLoans, ...repaidLoans]}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <LoanCard loan={item} onRepaid={handleLoanRepaid} />
-        )}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={Colors.primary}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={styles.emptyTitle}>No loans yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Tap "＋ Add" to record a loan to a friend
-            </Text>
-            <TouchableOpacity
-              style={styles.emptyAddBtn}
-              onPress={() => router.push('/add-loan')}
-            >
-              <Text style={styles.emptyAddBtnText}>Add First Loan</Text>
-            </TouchableOpacity>
+      <View style={styles.contentWrapper}>
+        {/* iOS Large Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.eyebrow}>TRANSACTIONS</Text>
+            <Text style={styles.title}>Your Loans</Text>
           </View>
-        }
-        ListHeaderComponent={
-          loans.length > 0 ? (
-            <View style={styles.statsRow}>
-              <View style={styles.stat}>
-                <Text style={styles.statValue}>{activeLoans.length}</Text>
-                <Text style={styles.statLabel}>Active</Text>
-              </View>
-              <View style={[styles.stat, styles.statDivider]}>
-                <Text style={[styles.statValue, { color: Colors.danger }]}>
-                  {overdueCount}
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => router.push('/add-loan')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.addBtnText}>＋ Add</Text>
+          </TouchableOpacity>
+        </View>
+
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        {/* iOS Segmented Control Bar */}
+        <View style={styles.segmentedControl}>
+          {(
+            [
+              { id: 'all', label: `All (${loans.length})` },
+              { id: 'active', label: `Active (${activeLoans.length})` },
+              { id: 'overdue', label: `Overdue (${overdueLoans.length})` },
+              { id: 'repaid', label: `Repaid (${repaidLoans.length})` },
+            ] as const
+          ).map((tab) => {
+            const isSelected = activeTab === tab.id;
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                style={[styles.segmentTab, isSelected && styles.segmentTabActive]}
+                onPress={() => setActiveTab(tab.id)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.segmentText,
+                    isSelected && styles.segmentTextActive,
+                    tab.id === 'overdue' && overdueLoans.length > 0 && !isSelected && { color: Colors.dangerLight },
+                  ]}
+                >
+                  {tab.label}
                 </Text>
-                <Text style={styles.statLabel}>Overdue</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Loan FlatList */}
+        <FlatList
+          data={filteredLoans}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <LoanCard loan={item} onRepaid={handleLoanRepaid} />
+          )}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={Colors.primaryLight}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconCircle}>
+                <Text style={styles.emptyIcon}>📋</Text>
               </View>
-              <View style={styles.stat}>
-                <Text style={[styles.statValue, { color: Colors.success }]}>
-                  {repaidLoans.length}
-                </Text>
-                <Text style={styles.statLabel}>Repaid</Text>
-              </View>
+              <Text style={styles.emptyTitle}>
+                {activeTab === 'all'
+                  ? 'No loans found'
+                  : `No ${activeTab} loans`}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {activeTab === 'all'
+                  ? 'Tap "＋ Add" to record your first loan to a friend'
+                  : `You do not have any ${activeTab} loans right now.`}
+              </Text>
+              {activeTab === 'all' && (
+                <TouchableOpacity
+                  style={[styles.emptyAddBtn, Shadow.subtle]}
+                  onPress={() => router.push('/add-loan')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.emptyAddBtnText}>Record First Loan</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          ) : null
-        }
-      />
+          }
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bg },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.bg },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.bg,
+  },
+  contentWrapper: {
+    flex: 1,
+    maxWidth: 640,
+    width: '100%',
+    alignSelf: 'center',
+    paddingTop: Spacing.xl + 10,
+    paddingHorizontal: Spacing.lg,
+  },
+  centered: {
+    flex: 1,
+    backgroundColor: Colors.bg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 56,
-    paddingBottom: Spacing.md,
+    alignItems: 'flex-end',
+    marginBottom: Spacing.md,
   },
-  title: { ...Typography.heading2 },
-  overdueWarning: {
-    ...Typography.bodySmall,
-    color: Colors.danger,
-    marginTop: 4,
-    fontWeight: '600',
+  eyebrow: {
+    ...Typography.caption,
+    color: Colors.primaryLight,
+    marginBottom: 4,
+  },
+  title: {
+    ...Typography.heading1,
   },
   addBtn: {
     backgroundColor: Colors.primary,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   addBtnText: {
-    color: '#fff',
-    fontWeight: '700',
+    color: '#ffffff',
+    fontWeight: '600',
     fontSize: 14,
+    letterSpacing: -0.2,
   },
-  list: {
-    padding: Spacing.lg,
-    paddingTop: Spacing.sm,
+  errorBanner: {
+    backgroundColor: Colors.dangerMuted,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(248, 113, 113, 0.2)',
   },
-  statsRow: {
+  errorText: {
+    ...Typography.bodySmall,
+    color: Colors.dangerLight,
+    textAlign: 'center',
+  },
+  segmentedControl: {
     flexDirection: 'row',
-    backgroundColor: Colors.bgCard,
-    borderRadius: Radius.lg,
+    backgroundColor: Colors.bgInput,
+    borderRadius: Radius.md,
+    padding: 3,
     marginBottom: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.border,
-    overflow: 'hidden',
   },
-  stat: {
+  segmentTab: {
     flex: 1,
+    paddingVertical: 7,
     alignItems: 'center',
-    paddingVertical: Spacing.md,
+    justifyContent: 'center',
+    borderRadius: Radius.sm,
   },
-  statDivider: {
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: Colors.border,
+  segmentTabActive: {
+    backgroundColor: Colors.bgCardAlt,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  statValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+  segmentText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textMuted,
+    letterSpacing: -0.2,
   },
-  statLabel: {
-    ...Typography.bodySmall,
-    marginTop: 2,
+  segmentTextActive: {
+    color: '#ffffff',
+  },
+  list: {
+    paddingBottom: Spacing.xxl + 20,
   },
   emptyState: {
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: Spacing.xxl,
   },
-  emptyIcon: { fontSize: 48, marginBottom: Spacing.md },
-  emptyTitle: { ...Typography.heading3, marginBottom: Spacing.xs },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  emptyIcon: {
+    fontSize: 28,
+  },
+  emptyTitle: {
+    ...Typography.heading3,
+    marginBottom: Spacing.xs,
+  },
   emptySubtitle: {
-    ...Typography.body,
-    color: Colors.textSecondary,
+    ...Typography.bodySmall,
+    color: Colors.textMuted,
     textAlign: 'center',
+    maxWidth: 280,
+    lineHeight: 18,
     marginBottom: Spacing.lg,
   },
   emptyAddBtn: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: Radius.full,
   },
   emptyAddBtnText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 15,
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 14,
   },
-  errorBanner: {
-    backgroundColor: Colors.dangerMuted,
-    margin: Spacing.lg,
-    marginTop: 0,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.danger + '30',
-  },
-  errorText: { ...Typography.body, color: Colors.danger },
 });
